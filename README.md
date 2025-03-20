@@ -42,7 +42,7 @@ Perpustakaan is a modern, user-friendly library management system built with Nux
 
 1. Clone the repository
 ```bash
-git clone https://github.com/AdityaDwiNugroho/UKKPerpus.git
+git clone https://github.com/4Kbrain/UKKPerpus---FORK.git
 cd UKKPerpus
 ```
 
