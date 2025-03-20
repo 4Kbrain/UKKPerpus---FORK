@@ -1,3 +1,4 @@
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -23,9 +24,8 @@ model User {
   email      String   @unique
   password   String
   // phone BigInt
-  phone      String   @unique
+  phone String @unique @db.VarChar(15)
   gender     String
-  birthdate  DateTime
   role       userRole @default(PEMINJAM)
   photo      String?  @default("/default-avatar.png")
   address    String?
@@ -35,20 +35,30 @@ model User {
   updated_at DateTime @updatedAt
   last_login DateTime?
 
+  totalDenda Decimal @default(0) @db.Decimal(10,2)
+
+  nik String @unique @db.VarChar(255)
+
+
   peminjaman Peminjaman[]
   ulasan Ulasan[]
   pengumuman Pengumuman[]
   settings Settings[]
+  personal_collection Favorit[]
+  
+  dendaRecords Denda[] @relation("UserDenda")
+  notifikasis Notifikasi[]
+
+
 }
 
 enum statusBuku {
   TIDAK_TERSEDIA
   TERSEDIA    // Bisa dipinjam
-  DIPINJAM    // Sedang dipinjam oleh seseorang
-  DIBLOKIR    // Tidak bisa dipinjam (misalnya, rusak/hilang)
-  DIRESERVASI // Sudah dipesan tapi belum diambil
+  // DIPINJAM    // Sedang dipinjam oleh seseorang
+  // DIBLOKIR    // Tidak bisa dipinjam (misalnya, rusak/hilang)
+  // DIRESERVASI // Sudah dipesan tapi belum diambil
 }
-
 
 model Buku {
   id           String   @id @default(uuid()) @db.Char(36)
@@ -59,15 +69,21 @@ model Buku {
   jumlah       Int
   cover        String
   status       statusBuku @default(TERSEDIA)
-  kode_buku    String
+  kode_buku    String   @unique
+  isbn         String?  @unique @db.VarChar(20)
+  edisi String? @db.VarChar(20) 
   sinopsis     String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
   categories BookCategory[]
   peminjaman Peminjaman[]
-  book Ulasan[]
+  review     Ulasan[]
+  personal_collection Favorit[]
+
+  @@index([status])
 }
+
 
 model Category {
   id   String @id @default(uuid()) @db.Char(36)
@@ -77,20 +93,30 @@ model Category {
 }
 
 model BookCategory {
-  id         String @id @default(uuid()) @db.Char(36)
+  id         String   @id @default(uuid()) @db.Char(36)
   bookId     String
   categoryId String
 
-  book     Buku     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  book       Buku     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
 
-  @@unique([bookId, categoryId])
+
+model Favorit {
+  id         String   @id @default(uuid()) @db.Char(36)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  book       Buku     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId     String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 enum statusPinjaman {
   PENDING // Masuk ke dalam keranjang pengajuan peminjaman
   DIAJUKAN // Saat user mengajukan permintaan peminjaman
   DISETUJUI // Saat petugas menyetujui peminjaman
+  MENUNGGU_PENGAMBILAN // Saat peminjaman sudah disetujui dan menunggu pengambilan
   DIPINJAM // Saat user sudah meminjam buku
   DIPERPANJANG // Saat user memperpanjang peminjaman
   DIKEMBALIKAN // Saat user mengembalikan buku
@@ -100,6 +126,55 @@ enum statusPinjaman {
   DIBERHENTIKAN // Petugas bisa membatalkan peminjaman meski buku belum dikembalikan (misalnya, karena pelanggaran aturan).
   MENDEKATI_TANGGAL_PENGEMBALIAN // Saat peminjaman sudah mendekati batas waktu pengembalian
 }
+
+enum statusDenda {
+  BELUM_LUNAS
+  LUNAS
+}
+
+enum reasonDenda {
+  DIGANTIKAN
+  KETERLAMBATAN
+  RUSAK
+  HILANG
+  LAINNYA
+}
+
+
+
+// Changes to make to your Prisma schema:
+model Denda {
+  id           String       @id @default(uuid()) @db.Char(36)
+  peminjamanId String?      // Make this optional
+  peminjaman   Peminjaman?  @relation("PeminjamanDenda", fields: [peminjamanId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserDenda", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  amount       Decimal?      @db.Decimal(10,2)
+  reason       reasonDenda
+  status       statusDenda  @default(BELUM_LUNAS)
+  createdAt    DateTime     @default(now())
+  paidAt       DateTime?
+
+  // Notifikasi terkait denda
+  notifications Notifikasi[]
+
+  @@index([userId])
+  @@index([peminjamanId])
+}
+
+
+model Notifikasi {
+  id          String   @id @default(uuid()) @db.Char(36)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  denda       Denda?   @relation(fields: [dendaId], references: [id], onDelete: Cascade)  // Opsional, untuk denda terkait
+  dendaId     String?
+  message     String   // Isi notifikasi
+  is_read     Boolean  @default(false) // Jika sudah dibaca, ubah jadi true
+  created_at  DateTime @default(now())
+}
+
+
 
 model Peminjaman {
   id         String    @id @default(uuid()) @db.Char(36)
@@ -111,6 +186,8 @@ model Peminjaman {
   dueDate    DateTime
   status    statusPinjaman    @default(PENDING)
   returnedAt DateTime?
+  denda Denda[]  @relation("PeminjamanDenda")
+
 
   // Relasi untuk menyimpan riwayat perpanjangan
   

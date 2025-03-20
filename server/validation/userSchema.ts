@@ -7,7 +7,6 @@ export const userSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   gender: z.string(),
-  birthdate: z.string().transform((val) => new Date(val)),
   address: z.string().optional(),
   role: z.enum(["ADMINISTRATOR", "PETUGAS", "PEMINJAM"]).optional(),
   photo: z.string().optional(),

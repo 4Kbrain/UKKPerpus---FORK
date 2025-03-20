@@ -22,7 +22,8 @@ import type { Peminjaman } from '~/types';
 
 
 definePageMeta({
-  layout: 'admin'
+  layout: 'admin',
+  allowedRoles: ['PETUGAS'] as const
 })
 
 const loading = ref(false)

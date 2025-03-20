@@ -38,6 +38,7 @@
             <v-col cols="12" sm="6">
               <v-text-field
                 v-model="newUser.email"
+                type="email"
                 placeholder="Masukkan alamat email"
                 prepend-inner-icon="mdi-email"
                 variant="outlined"
@@ -77,8 +78,9 @@
             </v-col>
             <v-col cols="12">
               <v-select
-                v-model="newUser.role"
-                label="Pilih jabatan"
+                v-model="newUser.gender"
+                :items="userGender"
+                label="Pilih Gender"
                 prepend-inner-icon="mdi-shield-account"
                 variant="outlined"
                 dense
@@ -87,23 +89,14 @@
             </v-col>
             <v-col cols="12">
               <v-select
-                v-model="newUser.status"
-                label="Pilih Status"
+                v-model="newUser.role"
+                :items="userRoles"
+                label="Pilih Role"
                 prepend-inner-icon="mdi-shield-account"
                 variant="outlined"
                 dense
                 required
               ></v-select>
-            </v-col>
-            <v-col cols="12">
-              <v-textarea
-                v-model="newUser.birthdate"
-                label="Alamat"
-                prepend-inner-icon="mdi-map-marker"
-                variant="outlined"
-                dense
-                rows="2"
-              ></v-textarea>
             </v-col>
           </v-row>
         </v-form>
@@ -112,10 +105,11 @@
       <v-card-actions class="pb-4 px-4">
         <v-spacer></v-spacer>
         <v-btn color="grey" text @click="createUser = false"> Batal </v-btn>
-        <v-btn color="primary" @click="createUser"> Simpan </v-btn>
+        <v-btn color="primary" @click="createNewUser"> Simpan </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
+  
 
   <v-row class="mb-4">
     <!-- Card: Total Anggota -->
@@ -185,9 +179,7 @@
     </v-col>
     <v-spacer />
     <v-col cols="2">
-      <v-btn color="primary" small @click="createUser = !createUser">
-        Tambah Pengguna
-      </v-btn>
+      <v-btn color="primary" small @click="createUser = !createUser"> Tambah Pengguna </v-btn>
     </v-col>
     <!-- <v-col cols="2">
       <v-btn color="success" small> Import Data </v-btn>
@@ -228,6 +220,10 @@
             <span>{{ useFormatDate(item.last_login as string) }}</span>
           </template>
 
+          <template v-slot:item.actions="{ item }">
+            <v-icon @click="handleEdit(item)" color="primary">mdi-pencil</v-icon>
+            <v-icon @click="handleDelete(item)" color="error">mdi-delete</v-icon>
+          </template>
           <!-- <v-pagination v-model="page" :length="3" class="my-4" /> -->
         </v-data-table-server>
       </v-card>
@@ -235,117 +231,246 @@
   </v-window>
 
   <!-- Tab Content: Admin & Petugas -->
-   <v-window v-model="tab">
+  <v-window v-model="tab">
     <v-window-item value="admin_petugas">
       <!-- <h1>Admin Petugas</h1> -->
-       <v-card class="mt-4">
-        <v-data-table-server v-model:items-per-page="itemsPerPage" :headers="headers" :items="serverItems" :items-length="totalAdminAndPetugas" :loading="loading" :search="search" item-value="name" class="elevation-1">
+      <v-card class="mt-4">
+        <v-data-table-server
+          v-model:items-per-page="itemsPerPage"
+          :headers="headers"
+          :items="serverItems.filter(v => v.role === 'ADMINISTRATOR' || v.role === 'PETUGAS')"
+          :items-length="totalAdminAndPetugas"
+          :loading="loading"
+          :search="search"
+          item-value="name"
+          class="elevation-1"
+        >
           <template v-slot:item.last_login="{ item }">
             <span>{{ useFormatDate(item.last_login as string) }}</span>
           </template>
 
+          <template v-slot:item.actions="{ item }">
+            <v-icon @click="handleEdit(item)" color="primary">mdi-pencil</v-icon>
+            <v-icon @click="handleDelete(item)" color="error">mdi-delete</v-icon>
+          </template>
         </v-data-table-server>
-       </v-card>
+      </v-card>
     </v-window-item>
-   </v-window>
+  </v-window>
 
   <!-- Tab Content: Anggota Perpustakaan -->
-   <v-window v-model="tab">
+  <v-window v-model="tab">
     <v-window-item value="anggota">
       <!-- <h1>Admin Petugas</h1> -->
-       <v-card class="mt-4">
-        <v-data-table-server v-model:items-per-page="itemsPerPage" :headers="headers" :items="serverItems" :items-length="totalPeminjam" :loading="loading" :search="search" item-value="name" class="elevation-1">
+      <v-card class="mt-4">
+        <v-data-table-server
+          v-model:items-per-page="itemsPerPage"
+          :headers="headers"
+          :items="serverItems.filter(v => v.role === 'PEMINJAM')"
+          :items-length="totalPeminjam"
+          :loading="loading"
+          :search="search"
+          item-value="name"
+          class="elevation-1"
+        >
           <template v-slot:item.last_login="{ item }">
             <span>{{ useFormatDate(item.last_login as string) }}</span>
           </template>
 
+          <template v-slot:item.actions="{ item }">
+            <v-icon @click="handleEdit(item)" color="primary">mdi-pencil</v-icon>
+            <v-icon @click="handleDelete(item)" color="error">mdi-delete</v-icon>
+          </template>
         </v-data-table-server>
-       </v-card>
+      </v-card>
     </v-window-item>
-   </v-window>
+  </v-window>
+
+  <v-snackbar
+    v-model="snackbar.show"
+    :timeout="3000"
+    :color="snackbar.color"
+    top
+    rounded="pill"
+    class="snackbar-custom"
+  >
+    <div class="d-flex align-center">
+      <v-icon class="mr-2">{{
+        snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'
+      }}</v-icon>
+      <span>{{ snackbar.message }}</span>
+    </div>
+  </v-snackbar>
+
+  <v-dialog v-model="dialog.show" max-width="400" style="align-self: flex-start; margin-top: 20px">
+    <v-card rounded="lg">
+      <v-card-title class="text-h6 pa-4">
+        <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
+        Error
+      </v-card-title>
+      <v-card-text class="pa-4">{{ dialog.message }}</v-card-text>
+      <v-card-actions class="pa-4 pt-0">
+        <v-spacer></v-spacer>
+        <v-btn color="primary" variant="elevated" @click="dialog.show = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts" setup>
-import type { User, UserRole } from "@/types";
+import type { User, UserRole } from '@/types'
 
 definePageMeta({
-  layout: "admin",
-});
+  layout: 'admin',
+  allowedRoles: ['ADMINISTRATOR'] as const
+})
 
-const router = useRouter();
-const createUser = ref(false);
+const router = useRouter()
+const createUser = ref(false)
 
-const itemsPerPage = ref(10);
-const tab = ref("terbaru");
-const search = ref("");
-const page = ref(1);
-const totalItems = ref(0);
-const totalAdminAndPetugas = ref(0);
-const totalPeminjam = ref(0);
-const totalNewUser = ref(0);
-const blockedUserCount = ref(0);
-const loading = ref(false);
+const isLoading = ref(false)
+
+const deleteDialog = ref(false)
+
+const itemsPerPage = ref(10)
+const tab = ref('terbaru')
+const search = ref('')
+const page = ref(1)
+const totalItems = ref(0)
+const totalAdminAndPetugas = ref(0)
+const totalPeminjam = ref(0)
+const totalNewUser = ref(0)
+const blockedUserCount = ref(0)
+const loading = ref(false)
+const userRoles = ref(['ADMINISTRATOR', 'PETUGAS', 'PEMINJAM'])
+const userGender = ref(['MALE', 'FEMALE'])
 
 // Form Data
 const newUser = reactive({
-  fullname: "",
-  username: "",
-  email: "",
-  phone: "",
-  password: "",
-  confirmPassword: "",
-  role: "",
-  birthdate: "",
-  status: "",
-});
+  fullname: '',
+  username: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  role: '',
+  gender: ''
+})
+
+const snackbar = ref({
+  show: false,
+  message: '',
+  color: 'success'
+})
+
+const dialog = ref({
+  show: false,
+  message: ''
+})
 
 // Server Items
-const serverItems = ref<User[]>([]);
+const serverItems = ref<User[]>([])
 const headers = ref([
   {
-    title: "Nama",
-    key: "fullname",
+    title: 'Nama',
+    key: 'fullname',
     sortable: false,
-    align: "start" as const,
+    align: 'start' as const
   },
-  { title: "username", key: "username", align: "start" as const },
-  { title: "Email", key: "email", align: "start" as const },
-  { title: "Gender", key: "gender", align: "start" as const },
-  { title: "Role", key: "role", align: "end" as const },
-  { title: "Login Terakhir", key: "last_login", align: "start" as const },
+  { title: 'username', key: 'username', align: 'start' as const },
+  { title: 'Email', key: 'email', align: 'start' as const },
+  { title: 'Gender', key: 'gender', align: 'start' as const },
+  { title: 'Role', key: 'role', align: 'end' as const },
+  { title: 'Login Terakhir', key: 'last_login', align: 'start' as const },
+  // { title: 'Status Akun', key: 'is_active', align: 'start' as const },
   {
-    title: "Actions",
-    key: "aksi",
-    align: "center" as const,
-    sortable: false,
-  },
-] as const);
+    title: 'Actions',
+    key: 'actions',
+    align: 'center' as const,
+    sortable: false
+  }
+] as const)
+
+
+const handleEdit = (item: User) => {
+  useRouter().push(`/user-management/${item.id}`)
+}
+
+async function handleDelete(item: User): Promise<void> {
+  console.log('Delete:', item)
+  loading.value = true
+  try {
+    if (!confirm('Are you sure you want to delete this user?')) return
+
+    const { error } = await useFetch(`/api/users/${item.id}`, {
+      method: 'DELETE'
+    })
+
+    if (error.value) {
+      console.error('Delete error:', error.value)
+      return
+    }
+
+    // Refresh the list after deletion
+    getItemFromApi()
+    deleteDialog.value = false
+    await new Promise(resolve => setTimeout(resolve, 1000))
+  } catch (err) {
+    console.error('Delete exception:', err)
+  } finally {
+    loading.value = false
+  }
+}
 
 function getStatusColor(status: UserRole): string {
   switch (status) {
-    case "ADMINISTRATOR":
-      return "green";
-    case "PETUGAS":
-      return "red";
-    case "PEMINJAM":
-      return "orange";
+    case 'ADMINISTRATOR':
+      return 'green'
+    case 'PETUGAS':
+      return 'red'
+    case 'PEMINJAM':
+      return 'orange'
     default:
-      return "grey";
+      return 'grey'
+  }
+}
+
+const createNewUser = async () => {
+  if (!newUser || Object.values(newUser).some(value => !value)) {
+    snackbar.value = { show: true, message: 'Please fill all required fields', color: 'error' }
+    return
+  }
+
+  isLoading.value = true
+  try {
+    const createdUser = await $fetch('/api/users', {
+      method: 'POST',
+      body: newUser
+    })
+
+    snackbar.value = { show: true, message: 'User created succesfully!...', color: 'success' }
+
+    await getItemFromApi()
+  } catch (error) {
+    console.error('Save User Error:', error)
+  } finally {
+    isLoading.value = false
+    createUser.value = false
   }
 }
 
 async function getItemFromApi() {
-  loading.value = true;
+  loading.value = true
   // TODO: Fetch data from API
   try {
-    const response = await $fetch("/api/users", {
-      method: "GET",
+    const response = await $fetch('/api/users', {
+      method: 'GET',
       query: {
-        search: search.value || "",
+        search: search.value || '',
         page: 1,
-        limit: itemsPerPage.value,
-      },
-    });
+        limit: itemsPerPage.value
+      }
+    })
 
     // console.log("API Response:", response.items);
 
@@ -353,35 +478,35 @@ async function getItemFromApi() {
       serverItems.value = response.items.map((item: User) => ({
         ...item,
         photo: item.photo ?? undefined,
-        last_login: item.last_login as string 
-      }));
-      totalItems.value = response.total;
-      totalAdminAndPetugas.value = response.adminAndPetugasCount;
-      totalPeminjam.value = response.peminjamCount;
-      totalNewUser.value = response.newUserCount;
+        last_login: item.last_login as string
+      }))
+      totalItems.value = response.total
+      totalAdminAndPetugas.value = response.adminAndPetugasCount
+      totalPeminjam.value = response.peminjamCount
+      totalNewUser.value = response.newUserCount
       blockedUserCount.value = response.blockedUserCount
     }
   } catch (error) {
-    console.error(error);
+    console.error(error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
-watch(createUser, (newValue) => {
+watch(createUser, newValue => {
   // console.log("Dialog is now " + (newValue ? "open" : "closed"));
-});
+})
 
 // search input (delay API call)
-let timeout: ReturnType<typeof setTimeout>;
+let timeout: ReturnType<typeof setTimeout>
 watch(search, () => {
-  clearTimeout(timeout);
+  clearTimeout(timeout)
   timeout = setTimeout(() => {
-    getItemFromApi();
-  }, 100);
-});
+    getItemFromApi()
+  }, 100)
+})
 
 onMounted(async () => {
-  await getItemFromApi();
-});
+  await getItemFromApi()
+})
 </script>

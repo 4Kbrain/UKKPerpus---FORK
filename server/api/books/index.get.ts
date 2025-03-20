@@ -1,4 +1,5 @@
 import prisma from "~/lib/prisma"
+import { statusBuku } from "@prisma/client"
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -25,14 +26,26 @@ export default defineEventHandler(async (event) => {
 
 
   const books = await prisma.buku.findMany({
-    where: whereCondition,
+    where: {
+      ...whereCondition,
+      status: statusBuku.TERSEDIA,
+    },
     skip,
     take: limit,
     select: {
       id: true,
       judul: true,
+      cover: true,
       pengarang: true,
-      categories: true,
+      categories: {
+        select: {
+          category: {
+            select: {
+              name: true
+            }
+          }
+        }
+      },
       penerbit:true,
       tahun_terbit: true,
       jumlah: true,
@@ -42,19 +55,20 @@ export default defineEventHandler(async (event) => {
   });
   // console.log("Data buku terkini:", books);
 
+  const formattedBooks = books.map(book => ({
+    ...book,
+    categories: book.categories.map(cat => cat.category.name)
+  }));
+
   const availableBook = await prisma.buku.count({
     where: {
-      status: {
-        in: ["TERSEDIA"], 
-      },
+      status: statusBuku.TERSEDIA
     },
   });
 
-  const borrowedBook = await prisma.buku.count({
+  const notAvailableBook = await prisma.buku.count({
     where: {
-      status: {
-        in: ["DIPINJAM"],
-      },
+      status: statusBuku.TIDAK_TERSEDIA
     },
   });
 
@@ -66,9 +80,9 @@ export default defineEventHandler(async (event) => {
     success: true,
     status: 200,
     message: "Books fetched successfully",
-    items: books,
+    items: formattedBooks,
     total,
     availableBook,
-    borrowedBook
+    notAvailableBook
   }
 })

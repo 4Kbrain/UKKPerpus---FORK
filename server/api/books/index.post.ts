@@ -39,14 +39,13 @@ export default defineEventHandler(async (event) => {
     // Buat buku baru di database
     const book = await prisma.buku.create({
       data: {
-        // Prisma otomatis generate jika tidak ada
-        id: parsedData.id || undefined, 
         judul: parsedData.judul,
         pengarang: parsedData.pengarang,
         penerbit: parsedData.penerbit || "Tidak diketahui",
-        tahun_terbit: parsedData.tahun_terbit ? new Date(parsedData.tahun_terbit) : new Date(),
         jumlah: parsedData.jumlah || 1,
         cover: parsedData.cover || "/default-cover.png",
+        tahun_terbit: parsedData.tahun_terbit ? new Date(parsedData.tahun_terbit) : new Date(),
+        categories: parsedData.categories ? { create: parsedData.categories.map((kategori) => ({ category: { create: { name: kategori } } })) } : undefined,
         status: parsedData.status || "TERSEDIA",
         kode_buku: parsedData.kode_buku,
         sinopsis: parsedData.sinopsis || "",

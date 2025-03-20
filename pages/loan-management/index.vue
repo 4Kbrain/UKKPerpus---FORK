@@ -1,304 +1,529 @@
 <template>
-  <Breadcrumbs variant="default" :show-home-icon="true" />
+  <h1 class="text-h4 font-weight-bold mb-4">Kelola Peminjaman</h1>
 
-  <v-row class="mb-4">
-    <!-- Card: Total Peminjaman -->
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="pa-4">
-        <v-card-title class="text-subtitle-1">Total Peminjaman</v-card-title>
-        <v-card-text>
-          <p class="text-h5 font-weight-bold text-primary">{{ totalItems }}</p>
-          <p class="text-green-darken-2 text-caption">
-            ↑ 12% dibanding bulan lalu
-          </p>
-        </v-card-text>
-      </v-card>
-    </v-col>
+  <div class="d-flex flex-wrap align-center mb-6 gap-4">
+    <v-text-field
+      v-model="search"
+      prepend-inner-icon="mdi-magnify"
+      label="Cari Peminjam atau Judul Buku"
+      variant="outlined"
+      density="compact"
+      hide-details
+      class="flex-grow-1 mr-4"
+      style="max-width: 350px"
+      @update:model-value="onSearch"
+      :disabled="isLoading"
+    />
 
-    <!-- Card: Peminjaman Aktif -->
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="pa-4">
-        <v-card-title class="text-subtitle-1">Peminjaman Aktif</v-card-title>
-        <v-card-text>
-          <p class="text-h5 font-weight-bold text-primary">
-            {{ totalAvailable }}
-          </p>
-          <p class="text-green-darken-2 text-caption">
-            ↑ 5% dibanding bulan lalu
-          </p>
-        </v-card-text>
-      </v-card>
-    </v-col>
+    <v-select
+      v-model="filterStatus"
+      :items="statusOptions"
+      label="Filter Status"
+      variant="outlined"
+      density="compact"
+      hide-details
+      class="max-width-250"
+      style="max-width: 200px"
+      :disabled="isLoading"
+    />
 
-    <!-- Card: Peminjaman Terlambat -->
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="pa-4">
-        <v-card-title class="text-subtitle-1"
-          >Peminjaman Terlambat</v-card-title
-        >
-        <v-card-text>
-          <p class="text-h5 font-weight-bold text-primary">
-            {{ totalBorrowed }}
-          </p>
-          <p class="text-red-darken-2 text-caption">
-            ↓ 3% dibanding bulan lalu
-          </p>
-        </v-card-text>
-      </v-card>
-    </v-col>
-
-    <!-- Card: Pengembalian Hari ini -->
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="pa-4">
-        <v-card-title class="text-subtitle-1"
-          >Pengembalian Hari ini</v-card-title
-        >
-        <v-card-text>
-          <p class="text-h5 font-weight-bold text-primary">23</p>
-          <p class="text-red-darken-2 text-caption">
-            ↓ 8% dibanding bulan lalu
-          </p>
-        </v-card-text>
-      </v-card>
-    </v-col>
-  </v-row>
-
-  <v-row align="center" class="mb-4">
-    <v-col cols="6">
-      <v-text-field
-        v-model="search"
-        placeholder="Cari peminjaman..."
-        dense
-        variant="outlined"
-        hide-details
-        prepend-inner-icon="mdi-magnify"
-        style="width: 100%"
-      />
-    </v-col>
     <v-spacer />
-    <v-col cols="2" class="d-flex align-center">
-      <v-select
-        v-model="selectedStatusPeminjaman"
-        :items="filterPeminjaman"
-        item-title="label"
-        item-value="value"
-        label="Pilih Status"
-        dense
-        variant="outlined"
-        hide-details
-        class="no-uppsercase"
-        style="width: 100%"
-      />
-    </v-col>
-    <v-col cols="2" class="d-flex align-center">
-      <v-text-field
-        label="Tanggal"
-        type="date"
-        dense
-        variant="outlined"
-        hide-details
-        prepend-inner-icon="mdi-magnify"
-        style="width: 100%"
-      />
-    </v-col>
-    <v-col cols="2">
-      <v-btn
-        color="primary"
-        small
-        @click="router.push('/book-management/create')"
-      >
-        Peminjaman Baru
-      </v-btn>
-    </v-col>
-    <!-- <v-col cols="2">
-      <v-btn color="success" small> Import Data </v-btn>
-    </v-col> -->
-  </v-row>
 
-  <!-- Tabs -->
-  <v-tabs v-model="tab">
-    <v-tab value="semua">Semua</v-tab>
-    <v-tab value="tersedia">Dipinjam</v-tab>
-    <v-tab value="dipinjam">Terlambat</v-tab>
-    <v-tab value="terlambat">Menunggu</v-tab>
-    <v-tab value="terlambat">Dikembalikan</v-tab>
-  </v-tabs>
+    <v-btn
+      color="primary"
+      prepend-icon="mdi-refresh"
+      @click="fetchLoans"
+      :loading="isLoading"
+      :disabled="isLoading"
+    >
+      Refresh
+    </v-btn>
+  </div>
 
-  <!-- Tab Content -->
-  <v-window v-model="tab">
-    <v-window-item value="semua">
-      <v-card class="mt-4">
-        <v-card-title>
-          <v-row align="center">
-            <v-col cols="8">
-              <span class="text-h6 font-weight-bold">Daftar Peminjaman</span>
-            </v-col>
-            
-            <!-- <v-col cols="2">
-              <v-btn color="primary" small> Peminjaman Baru </v-btn>
-            </v-col> -->
-          </v-row>
-        </v-card-title>
+  <v-data-table
+    :headers="headers"
+    :items="filteredLoans"
+    :search="search"
+    class="elevation-1"
+    :loading="isLoading"
+    loading-text="Memuat data peminjaman..."
+  >
+    <template v-slot:item.status="{ item }">
+      <v-chip :color="getStatusColor(item.status)">
+        {{ getStatusText(item.status) }}
+      </v-chip>
+    </template>
 
-        <v-data-table-server
-          v-model:items-per-page="itemsPerPage"
-          :headers="headers"
-          :items="serverItems"
-          :items-length="totalItems"
-          :loading="loading"
-          :search="search"
-          item-value="name"
-          class="elevation-1"
+    <template v-slot:item.borrowedAt="{ item }">
+      {{ formatDate(item.borrowedAt) }}
+    </template>
+
+    <template v-slot:item.dueDate="{ item }">
+      {{ formatDate(item.dueDate) }}
+    </template>
+
+    <template v-slot:item.returnedAt="{ item }">
+            <span>
+              {{ useFormatDate(item.returnedAt) }}
+            </span>
+          </template>
+
+    <template v-slot:item.actions="{ item }">
+      <div class="d-flex gap-2">
+        <template v-if="item.status === 'PENDING'">
+          <v-btn
+            color="success"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DISETUJUI')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DISETUJUI'"
+          >
+            <v-icon size="small" class="mr-1">mdi-check</v-icon>
+            Setujui
+          </v-btn>
+          <v-btn
+            color="error"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DIBATALKAN')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DIBATALKAN'"
+          >
+            <v-icon size="small" class="mr-1">mdi-close</v-icon>
+            Tolak
+          </v-btn>
+        </template>
+
+        <template v-else-if="item.status === 'DIAJUKAN'">
+          <v-btn
+            color="info"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DISETUJUI')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DISETUJUI'"
+          >
+            <v-icon size="small" class="mr-1">mdi-book-check-outline</v-icon>
+            Konfirmasi Pinjam
+          </v-btn>
+        </template>
+
+        <template v-else-if="item.status === 'DISETUJUI'">
+          <v-btn
+            color="info"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'MENUNGGU_PENGAMBILAN')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'MENUNGGU_PENGAMBILAN'"
+          >
+            <v-icon size="small" class="mr-1">mdi-book-check-outline</v-icon>
+            Konfirmasi Pinjam
+          </v-btn>
+        </template>
+
+        <template v-else-if="item.status === 'MENUNGGU_PENGAMBILAN'">
+          <v-btn
+            color="info"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DIPINJAM')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DIPINJAM'"
+          >
+            <v-icon size="small" class="mr-1">mdi-book-check-outline</v-icon>
+            Konfirmasi Pengambilan
+          </v-btn>
+        </template>
+
+        <!-- <template v-else-if="item.status === 'DIPINJAM'">
+          <v-btn
+            color="warning"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DIPERPANJANG')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DIPERPANJANG'"
+          >
+            <v-icon size="small" class="mr-1">mdi-clock-plus-outline</v-icon>
+            Perpanjang
+          </v-btn>
+
+          <v-btn
+            color="grey-darken-1"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DIKEMBALIKAN')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DIKEMBALIKAN'"
+          >
+            <v-icon size="small" class="mr-1">mdi-book-arrow-left-outline</v-icon>
+            Konfirmasi Kembali
+          </v-btn>
+        </template> -->
+
+        <template v-else-if="item.status === 'DIPINJAM'">
+          <v-btn
+            color="grey-darken-1"
+            size="small"
+            variant="outlined"
+            @click="showConfirmationDialog(item, 'DIKEMBALIKAN')"
+            :disabled="isProcessing || actionDisabled[item.id]"
+            :loading="actionLoading[item.id]?.status === 'DIKEMBALIKAN'"
+          >
+            <v-icon size="small" class="mr-1">mdi-book-arrow-left-outline</v-icon>
+            Konfirmasi Kembali
+          </v-btn>
+        </template>
+        
+ 
+
+        <template v-else>
+          <v-chip size="small" variant="flat" color="grey-lighten-1"> Tidak ada aksi </v-chip>
+        </template>
+
+        
+      </div>
+    </template>
+  </v-data-table>
+
+  <!-- Dialog Konfirmasi -->
+  <v-dialog v-model="dialog.show" max-width="500" persistent>
+    <v-card>
+      <v-card-title class="text-h5 pa-4">
+        {{ dialog.title }}
+      </v-card-title>
+
+      <v-card-text class="pa-4">
+        <p>{{ dialog.message }}</p>
+        <v-divider class="my-4"></v-divider>
+        <div v-if="dialog.loan" class="d-flex flex-column gap-2">
+          <p><strong>Peminjam:</strong> {{ dialog.loan.user?.fullname }}</p>
+          <p><strong>Buku:</strong> {{ dialog.loan.book?.judul }}</p>
+          <p><strong>Status Saat Ini:</strong> {{ getStatusText(dialog.loan.status) }}</p>
+          <p>
+            <strong>Status Baru:</strong>
+            <span class="font-weight-bold">{{
+              getStatusText(dialog.newStatus as StatusPinjaman)
+            }}</span>
+          </p>
+        </div>
+      </v-card-text>
+
+      <v-card-actions class="pa-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          color="grey-darken-1"
+          variant="text"
+          @click="dialog.show = false"
+          :disabled="isProcessing"
         >
-          <!-- <template v-slot:item.buku="{ item }">
-            <v-row align="center" no-gutters>
-              <v-col cols="2">
-                <v-img
-                  src="/default-avatar.png"
-                  alt="Book Image"
-                  max-height="30"
-                  max-width="30"
-                  contain
-                />
-              </v-col>
-              <v-col cols="10">
-                {{ item.judul }}
-              </v-col>
-            </v-row>
-          </template> -->
+          Batal
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="elevated"
+          @click="confirmStatusUpdate"
+          :loading="isProcessing"
+          :disabled="isProcessing"
+        >
+          Konfirmasi
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 
-          <template v-slot:item.status="{ item }">
-            <v-chip :color="getStatusColor(item.status as StatusPinjaman)" dark>
-              {{ item.status as StatusPinjaman }}
-            </v-chip>
-          </template>
+  <!-- Overlay loading untuk seluruh halaman -->
+  <v-overlay v-model="pageLoading" class="align-center justify-center" persistent>
+    <v-progress-circular indeterminate size="64" color="primary"></v-progress-circular>
+  </v-overlay>
 
-          <template v-slot:item.actions="{ item }">
-            <v-btn text color="secondary" class="mr-2">Kembalikan</v-btn>
-            <v-btn text color="primary" @click="router.push(`/loan-management/${loansId}`)">Detail</v-btn>
-          </template>
-        </v-data-table-server>
-
-        <!-- <v-pagination v-model="page" :length="3" class="my-4" /> -->
-      </v-card>
-    </v-window-item>
-  </v-window>
+  <!-- Snackbar untuk notifikasi -->
+  <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
+    {{ snackbar.message }}
+    <template v-slot:actions>
+      <v-btn variant="text" @click="snackbar.show = false"> Tutup </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
-<script lang="ts" setup>
-import type { Peminjaman, StatusPinjaman } from "@/types";
-
+<script setup lang="ts">
 definePageMeta({
-  layout: "admin",
-});
+  layout: 'admin'
+})
 
-const router = useRouter();
-const itemsPerPage = ref(10);
-const tab = ref("terbaru");
-const search = ref("");
-const page = ref(1);
-const totalItems = ref(0);
-const loading = ref(false);
+import type { Peminjaman, StatusPinjaman } from '~/types'
+import dayjs from 'dayjs'
 
-// Total Peminjaman
-const totalAvailable = ref(0);
-const totalBorrowed = ref(0);
-const loansId = ref("");
-
-const selectedStatusPeminjaman= ref(null);
-const filterPeminjaman = ref<{ label: string; value: "Semua" | StatusPinjaman }[]>([
-  { label: "Semua", value: "Semua" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Diajukan", value: "DIAJUKAN" },
-  { label: "Disetujui", value: "DISETUJUI" },
-  { label: "Dipinjam", value: "DIPINJAM" },
-  { label: "Diperpanjang", value: "DIPERPANJANG" },
-  { label: "Dikembalikan", value: "DIKEMBALIKAN" },
-  { label: "Dibatalkan", value: "DIBATALKAN" },
-  { label: "Ditolak", value: "DITOLAK" },
-  { label: "Terlambat", value: "TERLAMBAT" },
-  { label: "Diberhentikan", value: "DIBERHENTIKAN" },
-]);
-
-// Server Items
-const serverItems = ref<Peminjaman[]>([]);
-  const headers = ref([
-  // { title: "Kode Buku", align: "start", key: "id" },
-  { title: "User Id", align: "start", key: "userId" },
-  { title: "Buku Id", align: "start", key: "bookId" },
-  { title: "Tanggal Peminjaman", align: "start", key: "borrowedAt" },
-  { title: "Tanggal Pengembalian", align: "start", key: "dueDate" },
-  { title: "Status", align: "start", key: "status" },
-  // { title: "Status", align: "center", key: "status" },
-  { title: "Aksi", align: "center", key: "actions", sortable: false },
-] as const);
-
-
-function getStatusColor(status: StatusPinjaman): string {
-  switch (status) {
-    case "PENDING":
-      return "grey";
-    case "DIAJUKAN":
-      return "green";
-    case "DIPINJAM":
-      return "red";
-    case "DISETUJUI":
-      return "orange";
-    case "DIPINJAM":
-      return "orange";
-    case "DIPERPANJANG":
-      return "orange";
-    case "DIKEMBALIKAN":
-      return "orange";
-    case "DIBATALKAN":
-      return "orange";
-    default:
-      return "grey";
-  }
+const formatDate = (date: string): string => {
+  return dayjs(date).format('DD/MM/YYYY')
 }
 
-async function getItemFromApi() {
-  loading.value = true;
-  // TODO: Fetch data from API
+const drawer = ref(true)
+const rail = ref(false)
+
+// State untuk loading dan proses
+const isLoading = ref(false) // Loading untuk tabel dan filter
+const isProcessing = ref(false) // Loading untuk aksi proses konfirmasi
+const pageLoading = ref(false) // Loading overlay untuk seluruh halaman
+const actionLoading = ref<Record<string, { status: StatusPinjaman }>>({}) // Loading untuk tombol spesifik
+const actionDisabled = ref<Record<string, boolean>>({}) // Disable semua tombol untuk item tertentu
+
+const loans = ref<Peminjaman[]>([])
+const search = ref('')
+const filterStatus = ref<string>('Semua')
+
+// Dialog state
+const dialog = ref({
+  show: false,
+  title: '',
+  message: '',
+  loan: null as Peminjaman | null,
+  newStatus: null as StatusPinjaman | null
+})
+
+// Snackbar state
+const snackbar = ref({
+  show: false,
+  message: '',
+  color: 'success'
+})
+
+const statusOptions: string[] = [
+  'Semua',
+  'PENDING',
+  'DIAJUKAN',
+  'MENUNGGU_PENGAMBILAN',
+  'DISETUJUI',
+  'DIPINJAM',
+  'DIPERPANJANG',
+  'DIKEMBALIKAN',
+  'DIBATALKAN'
+]
+
+
+const headers = [
+  { title: 'Peminjam', value: 'user.fullname', key: 'user.fullname' },
+  { title: 'Buku', value: 'book.judul', key: 'book.judul' },
+  { title: 'Status', value: 'status', key: 'status' },
+  { title: 'Tanggal Peminjaman', value: 'borrowedAt', key: 'borrowedAt' },
+  { title: 'Jatuh Tempo', value: 'dueDate', key: 'dueDate' },
+  { title: 'Tanggal Kembalian', value: 'returnedAt', key: 'dueDate' },
+  { title: 'Aksi', value: 'actions', key: 'actions', sortable: false }
+]
+
+const statusTextMap: Record<StatusPinjaman, string> = {
+  PENDING: 'Menunggu Persetujuan',
+  DIAJUKAN: 'Diajukan',
+  DISETUJUI: 'Disetujui',
+  DIPINJAM: 'Sedang Dipinjam',
+  DIPERPANJANG: 'Diperpanjang',
+  DIKEMBALIKAN: 'Dikembalikan',
+  DIBATALKAN: 'Dibatalkan',
+  MENUNGGU_PENGAMBILAN: 'Menunggu Pengambilan',
+  MENDEKATI_TANGGAL_PENGEMBALIAN: 'Mendekati Tanggal Pengembalian',
+  DITOLAK: 'Ditolak',
+  TERLAMBAT: 'Terlambat',
+  DIBERHENTIKAN: 'Diberhentikan'
+}
+
+const statusColorMap: Record<StatusPinjaman, string> = {
+  PENDING: 'warning',
+  DIAJUKAN: 'orange',
+  DISETUJUI: 'success',
+  DIPINJAM: 'blue',
+  DIPERPANJANG: 'purple',
+  DIKEMBALIKAN: 'grey',
+  DIBATALKAN: 'error',
+  MENUNGGU_PENGAMBILAN: 'info',
+  MENDEKATI_TANGGAL_PENGEMBALIAN: 'info',
+  DITOLAK: 'error',
+  TERLAMBAT: 'red',
+  DIBERHENTIKAN: 'black'
+}
+
+const getStatusText = (status: StatusPinjaman): string => statusTextMap[status] ?? 'Tidak Diketahui'
+const getStatusColor = (status: StatusPinjaman): string => statusColorMap[status] ?? 'default'
+
+// Menangani validasi perubahan status
+const isValidStatusChange = (currentStatus: StatusPinjaman, newStatus: StatusPinjaman): boolean => {
+  // Daftar transisi status yang valid
+  const validTransitions: Record<StatusPinjaman, StatusPinjaman[]> = {
+    PENDING: ['DISETUJUI', 'DIBATALKAN'],
+    DISETUJUI: ['MENUNGGU_PENGAMBILAN', 'DIBATALKAN'],
+    MENUNGGU_PENGAMBILAN: ['DIPINJAM'],
+    DIPINJAM: ['DIKEMBALIKAN', 'DIPERPANJANG'],
+    DIPERPANJANG: ['DIKEMBALIKAN'],
+    DIAJUKAN: ['DISETUJUI', 'DIBATALKAN'],
+    DIKEMBALIKAN: [], // Tidak bisa diubah lagi
+    DIBATALKAN: [], // Tidak bisa diubah lagi
+    MENDEKATI_TANGGAL_PENGEMBALIAN: [],
+    DITOLAK: [],
+    TERLAMBAT: [],
+    DIBERHENTIKAN: []
+  }
+
+  return validTransitions[currentStatus]?.includes(newStatus) || false
+}
+
+// Computed untuk pencarian dan filter
+const filteredLoans = computed(() => {
+  let result = [...loans.value]
+
+  // Filter berdasarkan status
+  if (filterStatus.value !== 'Semua') {
+    result = result.filter(loan => loan.status === filterStatus.value)
+  }
+
+  // Filter berdasarkan pencarian
+  if (search.value) {
+    const searchLower = search.value.toLowerCase()
+    result = result.filter(
+      peminjaman =>
+        peminjaman.user?.fullname?.toLowerCase().includes(searchLower) ||
+        peminjaman.book?.judul?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  return result
+})
+
+const onSearch = () => {
+  // Handler untuk pencarian real-time
+  // Sudah dihandle oleh computed property filteredLoans
+}
+
+const fetchLoans = async () => {
+  if (isLoading.value) return // Prevent double fetching
+
+  isLoading.value = true
+  actionDisabled.value = {} // Reset disabled status
+
   try {
-    const response = await $fetch("/api/loans", {
-      method: "GET",
-      query: {
-        search: search.value || "",
-        page: 1,
-        limit: itemsPerPage.value,
-      },
-    });
-
-    // console.log("API Response:", response.items);
-
-    if (response.items.length > 0) {
-      serverItems.value = response.items.map((item: Peminjaman) => ({
-        ...item,
-        // cover: item.cover ?? undefined,
-      }));
-      totalItems.value = response.total;
-      totalAvailable.value = response.total;
-      totalBorrowed.value = response.availableLoan;
-      loansId.value = response.loansId.length > 0 ? response.loansId[0].id : "";
-    }
+    loans.value = await $fetch<Peminjaman[]>('/api/admin/peminjaman', {
+      method: 'GET',
+      params: {
+        status: filterStatus.value !== 'Semua' ? filterStatus.value.toUpperCase() : undefined
+      }
+    })
   } catch (error) {
-    console.error(error);
+    console.error('Gagal mengambil data peminjaman:', error)
+    showSnackbar('Gagal mengambil data peminjaman', 'error')
   } finally {
-    loading.value = false;
+    isLoading.value = false
   }
 }
 
-// search input (delay API call)
-let timeout: ReturnType<typeof setTimeout>;
-watch(search, () => {
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    getItemFromApi();
-  }, 100);
-});
+const debounce = (fn: Function, ms = 300) => {
+  let timeoutId: ReturnType<typeof setTimeout>
+  return function (...args: any[]) {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), ms)
+  }
+}
 
-onMounted(async () => {
-  await getItemFromApi();
-});
+const debouncedFetchLoans = debounce(fetchLoans, 300)
+
+const showConfirmationDialog = (loan: Peminjaman, newStatus: StatusPinjaman) => {
+  dialog.value = {
+    show: true,
+    loan,
+    newStatus,
+    title: newStatus === 'DIPERPANJANG' ? 'Konfirmasi Perpanjangan' : 'Konfirmasi Status',
+    message:
+      newStatus === 'DIPERPANJANG'
+        ? `Apakah Anda yakin ingin memperpanjang peminjaman buku ini?`
+        : `Apakah Anda yakin ingin mengubah status peminjaman ini menjadi ${getStatusText(newStatus)}?`,
+  }
+}
+
+
+const confirmStatusUpdate = async () => {
+  if (!dialog.value.loan || !dialog.value.newStatus) return
+
+  isProcessing.value = true
+  actionLoading.value[dialog.value.loan.id] = { status: dialog.value.newStatus }
+  actionDisabled.value[dialog.value.loan.id] = true
+
+  try {
+    await updateLoanStatus(dialog.value.loan.id, dialog.value.newStatus)
+    snackbar.value = {
+      show: true,
+      message: `Status berhasil diperbarui menjadi ${getStatusText(dialog.value.newStatus)}.`,
+      color: 'success'
+    }
+    fetchLoans()
+  } catch (error) {
+    snackbar.value = {
+      show: true,
+      message: 'Gagal memperbarui status. Silakan coba lagi.',
+      color: 'error'
+    }
+  } finally {
+    isProcessing.value = false
+    actionLoading.value[dialog.value.loan.id] = { status: null }
+    actionDisabled.value[dialog.value.loan.id] = false
+    dialog.value.show = false
+  }
+}
+
+
+const updateLoanStatus = async (id: string, status: StatusPinjaman) => {
+  // Tandai tombol sebagai loading dan disabled
+  actionLoading.value[id] = { status }
+  actionDisabled.value[id] = true
+
+  try {
+    const response = await $fetch(`/api/admin/peminjaman/${id}`, {
+      method: 'PATCH',
+      body: { status }
+    })
+
+    const message = `Status peminjaman berhasil diperbarui menjadi ${statusTextMap[status]}`
+    showSnackbar(message, 'success')
+
+    // Tunggu sebentar sebelum refresh untuk menghindari race condition
+    setTimeout(() => {
+      fetchLoans()
+    }, 500)
+  } catch (error: any) {
+    console.error(`Gagal memperbarui status peminjaman (${status}):`, error)
+
+    let errorMessage = 'Gagal memperbarui status peminjaman'
+
+    // Jika ada response error message
+    if (error.data?.message) {
+      errorMessage = error.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    showSnackbar(errorMessage, 'error')
+  } finally {
+    // Hapus loading dan disabled setelah 1 detik
+    setTimeout(() => {
+      delete actionLoading.value[id]
+      delete actionDisabled.value[id]
+    }, 1000)
+  }
+}
+
+const showSnackbar = (message: string, color: string = 'success') => {
+  snackbar.value = {
+    show: true,
+    message,
+    color
+  }
+}
+
+// Watch untuk perubahan filter dan search
+watch(filterStatus, debouncedFetchLoans)
+
+onMounted(() => {
+  pageLoading.value = true
+  fetchLoans().finally(() => {
+    pageLoading.value = false
+  })
+})
 </script>

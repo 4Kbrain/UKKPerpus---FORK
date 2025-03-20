@@ -5,35 +5,36 @@ import bcrypt from "bcrypt"
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
-  const parsedData = userSchema.parse(body)
-
+  let parsedData;
+  try {
+    parsedData = userSchema.parse(body);
+  } catch (error) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Validation Error",
+      message: error.errors?.[0]?.message || "Invalid input"
+    });
+  }
 
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [
-        {
-          email: parsedData.email
-        },
-        {
-          username: parsedData.username
-        },
-        {
-          phone: parsedData.phone
-        }
+        { email: parsedData.email },
+        { username: parsedData.username },
+        { phone: parsedData.phone }
       ]
     }
-  })
+  });
 
   if (existingUser) {
-    // Handle the conflict with generic message
     throw createError({
       statusCode: 400,
       statusMessage: "Bad Request",
-      message: "The request could not be processed."
+      message: "Email, username, or phone already exists"
     });
-  } 
+  }
 
-  const hashedPassword = await bcrypt.hash(parsedData.password, 10)
+  const hashedPassword = await bcrypt.hash(parsedData.password, 10);
 
   const user = await prisma.user.create({
     data: {
@@ -41,13 +42,13 @@ export default defineEventHandler(async (event) => {
       gender: parsedData.gender || "",
       password: hashedPassword
     }
-  })
+  });
 
   return {
     success: true,
-    status: 201,
+    statusCode: 201,
     message: "User created successfully",
     ...user,
     password: undefined
-  }
-})
+  };
+});

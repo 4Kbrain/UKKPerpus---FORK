@@ -1,5 +1,11 @@
 export type UserRole = "ADMINISTRATOR" | "PETUGAS" | "PEMINJAM";
-export type StatusBuku = "TERSEDIA" | "DIPINJAM" | "DIBLOKIR" | "DIRESERVASI" | "TIDAK_TERSEDIA";
+export type StatusBuku = "TERSEDIA" | "TIDAK_TERSEDIA";
+export enum ReasonDenda {
+  KETERLAMBATAN = "KETERLAMBATAN",
+  RUSAK = "RUSAK",
+  HILANG = "HILANG",
+  LAINNYA = "LAINNYA",
+}
 
 
 export interface User {
@@ -9,7 +15,6 @@ export interface User {
   email: string;
   phone: string;
   gender: string;
-  birthdate?: string | Date;
   address?: string | null;
   role: UserRole;
   photo?: string | null;
@@ -50,6 +55,7 @@ export interface Book {
   | "PENDING"
   | "DIAJUKAN"
   | "DISETUJUI"
+  | "MENUNGGU_PENGAMBILAN"
   | "DIPINJAM"
   | "DIPERPANJANG"
   | "MENDEKATI_TANGGAL_PENGEMBALIAN"
@@ -72,6 +78,14 @@ export interface Book {
     parentLoanId?: string | null;
     extensions?: Peminjaman[]; // Jika ada riwayat perpanjangan
     book: Book; // Hubungan ke Book
+  }
+
+  export interface Favorit {
+    id: string;
+    userId: string;
+    bookId: string;
+    created_at: string;
+    updated_at: string;
   }
 
   export type KategoriPengumuman = 

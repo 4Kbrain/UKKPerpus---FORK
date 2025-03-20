@@ -6,7 +6,7 @@
     "version": "1.0.5",
     "date": "2025-02-15"
   },
-  "license": "MIT",
+  "license": "CC BY-NC-ND 4.0",
   "author": {
     "name": "Aditya Dwi Nugroho",
     "email": "aditadit120420@gmail.com",
@@ -40,15 +40,18 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "seed:all": "tsx server/tasks/user-seed.ts && tsx server/tasks/book-seed.ts"
+    "seed:all": "tsx server/tasks/user-seed.ts && tsx server/tasks/book-seed.ts && tsx server/tasks/category-seed.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@prisma/nuxt": "^0.3.0",
     "@sidebase/nuxt-auth": "^0.10.0",
     "bcrypt": "^5.1.1",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.13",
     "next-auth": "~4.21.1",
     "nuxt": "^3.16.0",
+    "pdfkit": "^0.16.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "zod": "^3.24.2"
@@ -57,6 +60,7 @@
     "@iconify/vue": "^4.3.0",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^22.13.10",
+    "@types/pdfkit": "^0.13.9",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vite-plugin-vuetify": "^2.1.0",

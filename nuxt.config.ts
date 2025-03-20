@@ -22,7 +22,7 @@ export default defineNuxtConfig({
     //...
   ],
   auth: {
-    originEnvKey: "NUXT_AUTH_BASE_URL",
+    originEnvKey: process.env.NUXT_AUTH_BASE_URL || 'http://localhost:3000',
     globalAppMiddleware: true,
   },
   vite: {

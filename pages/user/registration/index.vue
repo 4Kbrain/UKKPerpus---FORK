@@ -14,11 +14,11 @@
             <v-form @submit.prevent="handleRegister">
               <v-row>
                 <v-col cols="12" md="6">
-                  <v-text-field 
-                    v-model="form.fullname" 
+                  <v-text-field
+                    v-model="form.fullname"
                     label="Full Name"
                     placeholder="John Doe"
-                    variant="outlined" 
+                    variant="outlined"
                     color="primary"
                     prepend-inner-icon="mdi-account-outline"
                     hide-details="auto"
@@ -28,11 +28,11 @@
                 </v-col>
 
                 <v-col cols="12" md="6">
-                  <v-text-field 
-                    v-model="form.username" 
+                  <v-text-field
+                    v-model="form.username"
                     label="Username"
                     placeholder="johndoe123"
-                    variant="outlined" 
+                    variant="outlined"
                     color="primary"
                     prepend-inner-icon="mdi-at"
                     hide-details="auto"
@@ -44,11 +44,11 @@
 
               <v-row>
                 <v-col cols="12" md="6">
-                  <v-text-field 
-                    v-model="form.email" 
+                  <v-text-field
+                    v-model="form.email"
                     label="Email Address"
                     type="email"
-                    variant="outlined" 
+                    variant="outlined"
                     color="primary"
                     prepend-inner-icon="mdi-email-outline"
                     :rules="[emailRule]"
@@ -59,11 +59,11 @@
                 </v-col>
 
                 <v-col cols="12" md="6">
-                  <v-text-field 
-                    v-model="form.phone" 
+                  <v-text-field
+                    v-model="form.phone"
                     label="Phone Number"
-                    placeholder="081234567890" 
-                    variant="outlined" 
+                    placeholder="081234567890"
+                    variant="outlined"
                     color="primary"
                     prepend-inner-icon="mdi-phone-outline"
                     hide-details="auto"
@@ -74,17 +74,17 @@
               </v-row>
 
               <v-row>
-                <v-col cols="12" md="6">
-                  <v-select 
-                    v-model="form.gender" 
+                <v-col cols="12">
+                  <v-select
+                    v-model="form.gender"
                     label="Gender"
                     :items="[
-                      { title: 'Male', value: 'L' },
-                      { title: 'Female', value: 'P' }
+                      { title: 'Male', value: 'MALE' },
+                      { title: 'Female', value: 'FEMALE' }
                     ]"
                     item-title="title"
                     item-value="value"
-                    variant="outlined" 
+                    variant="outlined"
                     color="primary"
                     prepend-inner-icon="mdi-gender-male-female"
                     hide-details="auto"
@@ -92,19 +92,22 @@
                     required
                   ></v-select>
                 </v-col>
-
-                <v-col cols="12" md="6">
-                  <v-text-field 
-                    v-model="form.birthdate" 
-                    label="Birthdate"
-                    type="date" 
-                    variant="outlined" 
+              </v-row>
+              <v-row>
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="form.address"
+                    label="Alamat"
+                    variant="outlined"
                     color="primary"
-                    prepend-inner-icon="mdi-calendar-outline"
+                    prepend-inner-icon="mdi-map-marker-outline"
                     hide-details="auto"
+                    autocomplete="off"
+                    rows="2"
+                    auto-grow
                     class="mb-4"
                     required
-                  ></v-text-field>
+                  ></v-textarea>
                 </v-col>
               </v-row>
 
@@ -142,20 +145,58 @@
                     required
                   ></v-text-field>
                 </v-col>
+                <v-col cols="12">
+                  <!-- <v-file-input
+                    v-model="form.nik"
+                    label="NIK"
+                    variant="outlined"
+                    color="primary"
+                    prepend-inner-icon="mdi-card-account-details-outline"
+                    hide-details="auto"
+                    class="mb-4"
+                    @click:append-inner="toggleConfirmPassword"
+                    required
+                  ></v-file-input> -->
+                  <v-label class="text-white mb-1 text-center">NIK</v-label>
+                  <v-file-input
+                    v-model="form.nik"
+                    label="Take Picture"
+                    prepend-inner-icon="mdi-card-account-details-outline"
+                    prepend-icon=""
+                    hide-detials="auto"
+                    variant="outlined"
+                    dense
+                    capture="environment"
+                    accept="image/*"
+                    ref="fileInput"
+                    @click="preventFolderSelection"
+                    @change="handleFile"
+                    required
+                  ></v-file-input>
+
+                  <v-img v-if="photo" :src="photo" class="captured-photo" block></v-img>
+                </v-col>
               </v-row>
 
-              <v-btn 
-                :disabled="isLoading" 
-                type="submit" 
-                block 
+              <v-btn
+                :disabled="isLoading"
+                type="submit"
+                block
                 size="large"
-                variant="elevated" 
-                color="primary" 
+                variant="elevated"
+                color="primary"
                 class="mt-4 mb-6"
                 height="48"
               >
-                <v-progress-circular v-if="isLoading" indeterminate size="24" class="mr-2"></v-progress-circular>
-                <span class="font-weight-medium">{{ isLoading ? 'Creating Account...' : 'Create Account' }}</span>
+                <v-progress-circular
+                  v-if="isLoading"
+                  indeterminate
+                  size="24"
+                  class="mr-2"
+                ></v-progress-circular>
+                <span class="font-weight-medium">{{
+                  isLoading ? 'Creating Account...' : 'Create Account'
+                }}</span>
               </v-btn>
             </v-form>
 
@@ -163,7 +204,10 @@
 
             <p class="text-center text-body-2">
               Already have an account?
-              <router-link to="/user/login" class="ml-1 text-decoration-none font-weight-medium primary--text">
+              <router-link
+                to="/user/login"
+                class="ml-1 text-decoration-none font-weight-medium primary--text"
+              >
                 Sign In
               </router-link>
             </p>
@@ -172,14 +216,27 @@
       </v-col>
     </v-row>
 
-    <v-snackbar v-model="snackbar.show" :timeout="3000" :color="snackbar.color" top rounded="pill" class="snackbar-custom">
+    <v-snackbar
+      v-model="snackbar.show"
+      :timeout="3000"
+      :color="snackbar.color"
+      top
+      rounded="pill"
+      class="snackbar-custom"
+    >
       <div class="d-flex align-center">
-        <v-icon class="mr-2">{{ snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}</v-icon>
+        <v-icon class="mr-2">{{
+          snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'
+        }}</v-icon>
         <span>{{ snackbar.message }}</span>
       </div>
     </v-snackbar>
 
-    <v-dialog v-model="dialog.show" max-width="400" style="align-self: flex-start; margin-top: 20px;">
+    <v-dialog
+      v-model="dialog.show"
+      max-width="400"
+      style="align-self: flex-start; margin-top: 20px"
+    >
       <v-card rounded="lg">
         <v-card-title class="text-h6 pa-4">
           <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
@@ -208,15 +265,31 @@ import { useFetch } from '#imports'
 const router = useRouter()
 const isLoading = ref(false)
 
+const photo = ref(null)
+
+const preventFolderSelection = event => {
+  // Prevent selecting existing files
+  event.target.value = null
+}
+
+const handleFile = event => {
+  const file = event.target.files[0]
+  if (file) {
+    form.value.nik = file
+    photo.value = URL.createObjectURL(file)
+  }
+}
+
 const form = ref({
   fullname: '',
   username: '',
   email: '',
   phone: '',
   gender: '',
-  birthdate: '',
+  address: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  nik: null
 })
 
 const snackbar = ref({
@@ -236,9 +309,23 @@ const showConfirmPassword = ref(false)
 const togglePassword = () => (showPassword.value = !showPassword.value)
 const toggleConfirmPassword = () => (showConfirmPassword.value = !showConfirmPassword.value)
 
-const emailRule = (value) => /.+@.+\..+/.test(value) || 'Enter a valid email'
-const passwordRule = (value) => value.length >= 8 || 'Password must be at least 8 characters'
-const confirmPasswordRule = (value) => value === form.value.password || 'Passwords do not match'
+const emailRule = value => /.+@.+\..+/.test(value) || 'Enter a valid email'
+const passwordRule = value => value.length >= 8 || 'Password must be at least 8 characters'
+const confirmPasswordRule = value => value === form.value.password || 'Passwords do not match'
+
+function waitForSnackbarClose() {
+  return new Promise(resolve => {
+    const stop = watch(
+      () => snackbar.value.show,
+      newVal => {
+        if (!newVal) {
+          stop()
+          resolve()
+        }
+      }
+    )
+  })
+}
 
 async function handleRegister() {
   if (form.value.password !== form.value.confirmPassword) {
@@ -249,18 +336,42 @@ async function handleRegister() {
   isLoading.value = true
 
   try {
+    const formData = new FormData()
+    formData.append('fullname', form.value.fullname)
+    formData.append('username', form.value.username)
+    formData.append('email', form.value.email)
+    formData.append('phone', form.value.phone)
+    formData.append('gender', form.value.gender)
+    formData.append('gender', form.value.address)
+    formData.append('password', form.value.password)
+    formData.append('confirmPassword', form.value.confirmPassword)
+
+    if (form.value.nik) {
+      // Kirim file NIK ke API
+      formData.append('nik', form.value.nik)
+    }
+
     const { data, error } = await useFetch('/api/auth', {
       method: 'POST',
-      body: form.value
+      body: formData
     })
 
     if (error.value) {
-      snackbar.value = { show: true, message: error.value.message || 'Registration failed', color: 'error' }
+      snackbar.value = {
+        show: true,
+        message: error.value.statusMessage || 'Registration failed',
+        color: 'error'
+      }
       return
     }
 
-    snackbar.value = { show: true, message: 'Registration successful! Redirecting...', color: 'success' }
-    setTimeout(() => router.push('/user/login'), 2000)
+    snackbar.value = {
+      show: true,
+      message: 'Registration successful! Redirecting...',
+      color: 'success'
+    }
+    await waitForSnackbarClose()
+    router.push('/user/login')
   } catch (err) {
     snackbar.value = { show: true, message: 'An unexpected error occurred', color: 'error' }
   } finally {
@@ -278,5 +389,10 @@ async function handleRegister() {
 
 .snackbar-custom {
   font-weight: 500;
+}
+.captured-photo {
+  width: 100vw;
+  max-width: 400px;
+  border-radius: 10px;
 }
 </style>
